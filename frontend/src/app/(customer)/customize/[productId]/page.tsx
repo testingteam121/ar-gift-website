@@ -96,7 +96,7 @@ export default function CustomizePage() {
   useEffect(() => {
     const fetchVideos = async () => {
       try {
-        const params = videoCategory !== 'all' ? { category: videoCategory } : {};
+        const params = videoCategory !== 'all' ? { category: videoCategory } : undefined;
         const { data } = await presetVideoApi.getAll(params);
         setPresetVideos(data.videos);
       } catch {
