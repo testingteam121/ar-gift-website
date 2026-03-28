@@ -83,7 +83,7 @@ export default function CustomizePage() {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const params = templateCategory !== 'all' ? { category: templateCategory } : {};
+        const params = templateCategory !== 'all' ? { category: templateCategory } : undefined;
         const { data } = await templateApi.getAll(params);
         setTemplates(data.templates);
       } catch {
