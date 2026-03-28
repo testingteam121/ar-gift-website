@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -38,7 +38,7 @@ function Confetti() {
   );
 }
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get('orderId');
@@ -222,5 +222,13 @@ export default function OrderConfirmationPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#F5A900] border-t-transparent rounded-full animate-spin" /></div>}>
+      <OrderConfirmationContent />
+    </Suspense>
   );
 }

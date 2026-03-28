@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Search, Package, CheckCircle, Truck, Printer, Clock, X, Sparkles } from 'lucide-react';
@@ -18,7 +18,7 @@ const statusSteps: { status: OrderStatus; label: string; icon: React.ElementType
 
 const statusOrder = ['pending', 'processing', 'printing', 'shipped', 'delivered'];
 
-export default function TrackOrderPage() {
+function TrackOrderContent() {
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState(searchParams.get('orderId') || '');
   const [email, setEmail] = useState('');
@@ -274,5 +274,13 @@ export default function TrackOrderPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TrackOrderPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center"><div className="w-8 h-8 border-4 border-[#F5A900] border-t-transparent rounded-full animate-spin" /></div>}>
+      <TrackOrderContent />
+    </Suspense>
   );
 }
