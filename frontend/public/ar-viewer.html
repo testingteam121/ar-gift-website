@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>AR Gift Viewer - AR Gifts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: white;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Loading screen */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #1a0533, #3b0764, #4c1d95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-logo {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.5);
+    }
+
+    .loading-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .loading-subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 32px;
+      text-align: center;
+      max-width: 280px;
+      line-height: 1.5;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(168, 85, 247, 0.3);
+      border-top: 3px solid #a855f7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-progress {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Error screen */
+    #error-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+      text-align: center;
+    }
+
+    #error-screen.visible { display: flex; }
+
+    .error-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .error-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .error-message {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 24px;
+      line-height: 1.6;
+      max-width: 300px;
+    }
+
+    .error-btn {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 4px;
+    }
+
+    .error-btn.secondary {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* No params screen */
+    #no-params-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #1a0533, #0a0a0f);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+      text-align: center;
+    }
+
+    #no-params-screen.visible { display: flex; }
+
+    /* HUD Overlay */
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #hud-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+      pointer-events: auto;
+    }
+
+    .hud-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      padding: 8px 14px;
+      border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .hud-brand-dot {
+      width: 8px;
+      height: 8px;
+      background: #a855f7;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hud-brand-text {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    #btn-close {
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: background 0.2s;
+    }
+
+    #btn-close:hover { background: rgba(255,255,255,0.15); }
+
+    #hud-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px 16px;
+      background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+      display: flex;
+      justify-content: center;
+    }
+
+    #scan-guide {
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 16px 24px;
+      text-align: center;
+      max-width: 320px;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    #scan-guide.detected {
+      border-color: rgba(168, 85, 247, 0.6);
+      background: rgba(124, 58, 237, 0.3);
+    }
+
+    .scan-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .scan-text {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .scan-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Corner markers for scan guide */
+    .corner-guide {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .corner {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-color: rgba(168, 85, 247, 0.8);
+      border-style: solid;
+      border-width: 0;
+    }
+
+    .corner.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
+    .corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
+    .corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
+    .corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+    /* A-Frame / MindAR canvas override */
+    a-scene {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
+    /* Detection flash */
+    #detection-flash {
+      position: fixed;
+      inset: 0;
+      background: rgba(168, 85, 247, 0.2);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 200;
+      transition: opacity 0.3s;
+    }
+
+    #detection-flash.flash { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-screen">
+  <div class="loading-logo">✨</div>
+  <div class="loading-title">AR Gifts</div>
+  <div class="loading-subtitle" id="loading-subtitle">Initializing augmented reality experience...</div>
+  <div class="spinner"></div>
+  <div class="loading-progress" id="loading-progress">Loading AR engine...</div>
+</div>
+
+<!-- No Params Screen -->
+<div id="no-params-screen">
+  <div style="font-size:64px;margin-bottom:16px">🎁</div>
+  <div style="font-size:22px;font-weight:700;margin-bottom:8px">No AR Target Found</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:24px;line-height:1.6;max-width:300px">
+    This page needs target image and video parameters to show the AR experience.
+    Please use this viewer from the AR Gifts customization page.
+  </div>
+  <button class="error-btn" onclick="window.history.back()">← Go Back</button>
+  <button class="error-btn secondary" onclick="window.location.href='/'">AR Gifts Home</button>
+</div>
+
+<!-- Error Screen -->
+<div id="error-screen">
+  <div class="error-icon">📷</div>
+  <div class="error-title" id="error-title">Camera Access Required</div>
+  <div class="error-message" id="error-message">
+    Please allow camera access to use the AR experience. Check your browser settings and try again.
+  </div>
+  <button class="error-btn" onclick="location.reload()">Try Again</button>
+  <button class="error-btn secondary" onclick="window.history.back()">Go Back</button>
+</div>
+
+<!-- Detection flash -->
+<div id="detection-flash"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="hud-top">
+    <div class="hud-brand">
+      <div class="hud-brand-dot"></div>
+      <span class="hud-brand-text">AR Gifts Live</span>
+    </div>
+    <button id="btn-close" onclick="handleClose()" title="Close AR">✕</button>
+  </div>
+
+  <div class="corner-guide">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+  </div>
+
+  <div id="hud-bottom">
+    <div id="scan-guide">
+      <div class="scan-icon" id="scan-icon">📸</div>
+      <div class="scan-text" id="scan-text">Point camera at your AR gift</div>
+      <div class="scan-sub" id="scan-sub">Keep the image in frame · Hold steady</div>
+    </div>
+  </div>
+</div>
+
+<!-- MindAR + A-Frame CDN scripts -->
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<script>
+  // ─── Read URL params ──────────────────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const targetSrc = params.get('target') || '';
+  const videoSrc  = params.get('video')  || '';
+
+  const loadingScreen   = document.getElementById('loading-screen');
+  const errorScreen     = document.getElementById('error-screen');
+  const noParamsScreen  = document.getElementById('no-params-screen');
+  const loadingSubtitle = document.getElementById('loading-subtitle');
+  const loadingProgress = document.getElementById('loading-progress');
+  const scanGuide       = document.getElementById('scan-guide');
+  const scanIcon        = document.getElementById('scan-icon');
+  const scanText        = document.getElementById('scan-text');
+  const scanSub         = document.getElementById('scan-sub');
+  const detectionFlash  = document.getElementById('detection-flash');
+
+  function showError(title, message) {
+    document.getElementById('error-title').textContent = title;
+    document.getElementById('error-message').textContent = message;
+    loadingScreen.classList.add('hidden');
+    errorScreen.classList.add('visible');
+  }
+
+  function handleClose() {
+    if (window.opener) window.close();
+    else window.history.back();
+  }
+
+  // ─── Validate params ──────────────────────────────────────────────────────
+  if (!targetSrc || !videoSrc) {
+    loadingScreen.classList.add('hidden');
+    noParamsScreen.classList.add('visible');
+  } else {
+    initAR();
+  }
+
+  // ─── Simplified AR mode (when no .mind file – image comparison fallback) ──
+  //
+  // For production, you should pre-compile a .mind file from your target image
+  // using the MindAR compiler: https://hiukim.github.io/mind-ar-js-doc/tools/compile
+  // and pass it as ?target=https://your-cdn.com/target.mind&video=...
+  //
+  // This viewer detects if the target is a .mind file or raw image URL and
+  // adapts accordingly. For raw images (no .mind), it falls back to a
+  // simulated AR preview (video overlay with tap-to-reveal UX).
+  //
+  function initAR() {
+    const isMindFile = targetSrc.endsWith('.mind') || targetSrc.includes('.mind?');
+
+    if (isMindFile) {
+      initMindAR(targetSrc);
+    } else {
+      // Raw image: use simulated AR preview mode
+      initSimulatedAR();
+    }
+  }
+
+  // ─── Full MindAR mode (.mind target file) ────────────────────────────────
+  function initMindAR(mindFileUrl) {
+    loadingProgress.textContent = 'Initializing MindAR engine...';
+
+    // Dynamically create A-Frame scene
+    const scene = document.createElement('a-scene');
+    scene.setAttribute('mindar-image', `imageTargetSrc: ${mindFileUrl}; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;`);
+    scene.setAttribute('color-space', 'sRGB');
+    scene.setAttribute('renderer', 'colorManagement: true; physicallyCorrectLights: true;');
+    scene.setAttribute('vr-mode-ui', 'enabled: false');
+    scene.setAttribute('device-orientation-permission-ui', 'enabled: false');
+    scene.setAttribute('embedded', '');
+
+    const assets = document.createElement('a-assets');
+    const videoEl = document.createElement('video');
+    videoEl.id = 'ar-video';
+    videoEl.src = videoSrc;
+    videoEl.setAttribute('preload', 'auto');
+    videoEl.setAttribute('response-type', 'arraybuffer');
+    videoEl.setAttribute('loop', '');
+    videoEl.setAttribute('playsinline', '');
+    videoEl.setAttribute('webkit-playsinline', '');
+    videoEl.muted = false;
+    assets.appendChild(videoEl);
+    scene.appendChild(assets);
+
+    const camera = document.createElement('a-camera');
+    scene.appendChild(camera);
+
+    const entity = document.createElement('a-entity');
+    entity.setAttribute('mindar-image-target', 'targetIndex: 0');
+
+    // Scale the video to fit the target image (aspect ratio 16:9)
+    const videoPlane = document.createElement('a-video');
+    videoPlane.setAttribute('src', '#ar-video');
+    videoPlane.setAttribute('width', '1');
+    videoPlane.setAttribute('height', '0.5625');
+    videoPlane.setAttribute('position', '0 0 0.001');
+    entity.appendChild(videoPlane);
+    scene.appendChild(entity);
+
+    document.body.appendChild(scene);
+
+    scene.addEventListener('loaded', () => {
+      loadingProgress.textContent = 'AR ready! Point camera at your gift.';
+      setTimeout(() => loadingScreen.classList.add('hidden'), 800);
+    });
+
+    scene.addEventListener('arError', () => {
+      showError('AR Error', 'Failed to initialize AR. Please check camera permissions and try again.');
+    });
+
+    entity.addEventListener('targetFound', () => {
+      videoEl.play().catch(() => {});
+      onTargetFound();
+    });
+
+    entity.addEventListener('targetLost', () => {
+      videoEl.pause();
+      onTargetLost();
+    });
+  }
+
+  // ─── Simulated AR mode (raw image URL, no .mind file) ────────────────────
+  //
+  // Shows camera feed with an overlay video panel.
+  // The video plays when user taps the screen (simulating AR trigger).
+  // For production, compile the image to a .mind file for true image tracking.
+  //
+  function initSimulatedAR() {
+    loadingProgress.textContent = 'Starting camera...';
+    loadingSubtitle.textContent = 'Note: For full AR tracking, use a compiled .mind file.';
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then((stream) => {
+        buildSimulatedScene(stream);
+      })
+      .catch((err) => {
+        if (err.name === 'NotAllowedError') {
+          showError('Camera Permission Denied', 'Please allow camera access in your browser settings, then reload the page.');
+        } else if (err.name === 'NotFoundError') {
+          showError('No Camera Found', 'Your device does not have a compatible camera. Please try on a mobile device.');
+        } else {
+          showError('Camera Error', 'Could not access camera: ' + err.message);
+        }
+      });
+  }
+
+  function buildSimulatedScene(stream) {
+    // Camera background
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    video.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;';
+    document.body.appendChild(video);
+
+    // AR overlay container
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; inset: 0; z-index: 50; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      pointer-events: none;
+    `;
+
+    // Target image preview (small, top-left)
+    if (targetSrc) {
+      const targetPreview = document.createElement('div');
+      targetPreview.style.cssText = `
+        position: absolute; top: 80px; left: 16px;
+        width: 80px; height: 80px; border-radius: 12px; overflow: hidden;
+        border: 2px solid rgba(168, 85, 247, 0.8); box-shadow: 0 0 20px rgba(168,85,247,0.4);
+        pointer-events: auto;
+      `;
+      const targetImg = document.createElement('img');
+      targetImg.src = targetSrc;
+      targetImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      targetPreview.appendChild(targetImg);
+
+      const label = document.createElement('div');
+      label.style.cssText = `
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: rgba(0,0,0,0.7); color: white; font-size: 9px;
+        text-align: center; padding: 3px; font-weight: 600;
+      `;
+      label.textContent = 'TARGET';
+      targetPreview.appendChild(label);
+      overlay.appendChild(targetPreview);
+    }
+
+    // AR Video panel (centered, hidden initially)
+    const videoPanelWrapper = document.createElement('div');
+    videoPanelWrapper.id = 'ar-video-panel';
+    videoPanelWrapper.style.cssText = `
+      width: min(360px, 90vw);
+      background: rgba(0,0,0,0.85);
+      border-radius: 24px;
+      overflow: hidden;
+      border: 2px solid rgba(168, 85, 247, 0.6);
+      box-shadow: 0 0 60px rgba(124, 58, 237, 0.4);
+      display: none;
+      flex-direction: column;
+      pointer-events: auto;
+      backdrop-filter: blur(10px);
+    `;
+
+    const arVideoEl = document.createElement('video');
+    arVideoEl.src = videoSrc;
+    arVideoEl.controls = true;
+    arVideoEl.playsInline = true;
+    arVideoEl.style.cssText = 'width:100%;display:block;max-height:65vh;background:#000;';
+    arVideoEl.setAttribute('webkit-playsinline', '');
+
+    const arVideoFooter = document.createElement('div');
+    arVideoFooter.style.cssText = 'padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;';
+    arVideoFooter.innerHTML = `
+      <span style="color:rgba(168,85,247,1);font-size:13px;font-weight:700;">✨ AR Gift Message</span>
+      <button onclick="hideARVideo()" style="background:rgba(255,255,255,0.1);border:none;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;">✕ Close</button>
+    `;
+
+    videoPanelWrapper.appendChild(arVideoEl);
+    videoPanelWrapper.appendChild(arVideoFooter);
+    overlay.appendChild(videoPanelWrapper);
+    document.body.appendChild(overlay);
+
+    // Tap to reveal AR video
+    let videoShown = false;
+    document.body.addEventListener('click', () => {
+      if (!videoShown) {
+        showARVideo(arVideoEl, videoPanelWrapper);
+      }
+    });
+
+    window.hideARVideo = function() {
+      videoPanelWrapper.style.display = 'none';
+      arVideoEl.pause();
+      videoShown = false;
+      onTargetLost();
+    };
+
+    function showARVideo(el, panel) {
+      videoShown = true;
+      panel.style.display = 'flex';
+      el.play().catch(() => {});
+      onTargetFound();
+    }
+
+    // Remove loading screen after camera is ready
+    video.addEventListener('loadeddata', () => {
+      setTimeout(() => {
+        loadingScreen.classList.add('hidden');
+        // Update scan guide for simulated mode
+        scanText.textContent = 'Tap anywhere to reveal AR video';
+        scanSub.textContent = 'Point camera at the target image';
+      }, 600);
+    });
+  }
+
+  function onTargetFound() {
+    // Flash effect
+    detectionFlash.classList.add('flash');
+    setTimeout(() => detectionFlash.classList.remove('flash'), 300);
+
+    // Update scan guide
+    scanGuide.classList.add('detected');
+    scanIcon.textContent = '🎬';
+    scanText.textContent = 'Playing your video message!';
+    scanSub.textContent = 'Keep the gift in frame';
+  }
+
+  function onTargetLost() {
+    scanGuide.classList.remove('detected');
+    scanIcon.textContent = '📸';
+    scanText.textContent = 'Point camera at your AR gift';
+    scanSub.textContent = 'Keep the image in frame · Hold steady';
+  }
+</script>
+</body>
+</html>
