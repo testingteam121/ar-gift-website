@@ -16,6 +16,9 @@ const arRoutes = require('./src/routes/ar');
 
 const app = express();
 
+// Trust proxy (required for Render/Heroku/etc)
+app.set('trust proxy', 1);
+
 // Connect to MongoDB
 connectDB();
 
