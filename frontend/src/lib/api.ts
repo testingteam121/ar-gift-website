@@ -94,6 +94,7 @@ export const authApi = {
   login: (data: object) => api.post('/auth/login', data),
   adminLogin: (data: object) => api.post('/auth/admin/login', data),
   getMe: () => api.get('/auth/me'),
+  updateProfile: (data: object) => api.put('/auth/profile', data),
 };
 
 export const arApi = {

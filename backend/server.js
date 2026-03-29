@@ -5,6 +5,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const connectDB = require('./src/config/db');
+const passport = require('./src/config/passport');
 
 const authRoutes = require('./src/routes/auth');
 const productRoutes = require('./src/routes/products');
@@ -21,6 +22,9 @@ app.set('trust proxy', 1);
 
 // Connect to MongoDB
 connectDB();
+
+// Passport (no session — JWT only)
+app.use(passport.initialize());
 
 // Security middleware
 app.use(helmet({

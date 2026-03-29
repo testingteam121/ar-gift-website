@@ -137,4 +137,31 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe, adminLogin, updateProfile };
+// @desc    Change password
+// @route   PUT /api/auth/password
+// @access  Private
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
+    }
+    const user = await User.findById(req.user.id).select('+password');
+    if (user.password) {
+      if (!currentPassword) {
+        return res.status(400).json({ success: false, message: 'Current password is required.' });
+      }
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+      }
+    }
+    user.password = newPassword;
+    await user.save();
+    res.status(200).json({ success: true, message: 'Password updated successfully.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { register, login, getMe, adminLogin, updateProfile, changePassword };

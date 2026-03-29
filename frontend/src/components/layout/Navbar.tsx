@@ -165,11 +165,11 @@ export default function Navbar() {
                             <p className="text-sm font-medium text-[#1d1c1c] truncate">{user.email}</p>
                           </div>
                           <Link
-                            href="/track-order"
+                            href="/account"
                             onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#555555] hover:bg-[#F7F7F7] hover:text-[#1d1c1c] transition-colors"
                           >
-                            My Orders
+                            My Account
                           </Link>
                           <button
                             onClick={handleLogout}
