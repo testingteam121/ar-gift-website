@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Menu, X, Sparkles } from 'lucide-react';
+import { ShoppingCart, Menu, X, Sparkles, User, LogOut, ChevronDown } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -19,9 +20,13 @@ const navLinks = [
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const itemCount = useCartStore((state) => state.getItemCount());
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -37,6 +42,22 @@ export default function Navbar() {
     document.body.style.overflow = isMobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isMobileOpen]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setUserMenuOpen(false);
+    router.push('/');
+  };
 
   return (
     <>
@@ -73,12 +94,10 @@ export default function Navbar() {
                 const isActive = pathname === link.href;
                 return (
                   <Link
-                    key={link.href}
+                    key={link.label}
                     href={link.href}
                     className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'text-[#F5A900]'
-                        : 'text-[#555555] hover:text-[#1d1c1c]'
+                      isActive ? 'text-[#F5A900]' : 'text-[#555555] hover:text-[#1d1c1c]'
                     }`}
                   >
                     {isActive && (
@@ -117,13 +136,69 @@ export default function Navbar() {
                 </AnimatePresence>
               </Link>
 
-              {/* Shop CTA */}
-              <Link
-                href="/products"
-                className="hidden md:flex items-center gap-1.5 btn-primary text-sm px-5 py-2.5"
-              >
-                <span>Shop Now</span>
-              </Link>
+              {/* Auth — desktop */}
+              {mounted && (
+                isAuthenticated && user ? (
+                  <div className="relative hidden md:block" ref={userMenuRef}>
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-[#555555] hover:text-[#1d1c1c] hover:bg-[#F7F7F7] transition-all"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-[#FEF3C7] flex items-center justify-center">
+                        <User className="w-3.5 h-3.5 text-[#F5A900]" />
+                      </div>
+                      <span className="max-w-[100px] truncate">{user.name?.split(' ')[0]}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {userMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50"
+                        >
+                          <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                            <p className="text-xs text-gray-400">Signed in as</p>
+                            <p className="text-sm font-medium text-[#1d1c1c] truncate">{user.email}</p>
+                          </div>
+                          <Link
+                            href="/track-order"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#555555] hover:bg-[#F7F7F7] hover:text-[#1d1c1c] transition-colors"
+                          >
+                            My Orders
+                          </Link>
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Sign Out
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <div className="hidden md:flex items-center gap-1">
+                    <Link
+                      href="/login"
+                      className="px-4 py-2 rounded-xl text-sm font-medium text-[#555555] hover:text-[#1d1c1c] hover:bg-[#F7F7F7] transition-all"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="px-4 py-2 rounded-xl text-sm font-medium bg-[#F5A900] text-white hover:bg-[#D97706] transition-all"
+                    >
+                      Register
+                    </Link>
+                  </div>
+                )
+              )}
 
               {/* Mobile menu button */}
               <button
@@ -142,7 +217,6 @@ export default function Navbar() {
       <AnimatePresence>
         {isMobileOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -152,7 +226,6 @@ export default function Navbar() {
               onClick={() => setIsMobileOpen(false)}
             />
 
-            {/* Drawer */}
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -177,13 +250,26 @@ export default function Navbar() {
                 </button>
               </div>
 
+              {/* User info strip */}
+              {mounted && isAuthenticated && user && (
+                <div className="px-5 py-4 border-b border-[#e6e6e6] flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#FEF3C7] flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-[#F5A900]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1d1c1c] truncate">{user.name}</p>
+                    <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                  </div>
+                </div>
+              )}
+
               {/* Nav Links */}
               <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
                 {navLinks.map((link, index) => {
                   const isActive = pathname === link.href;
                   return (
                     <motion.div
-                      key={link.href}
+                      key={link.label}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05, duration: 0.3 }}
@@ -213,18 +299,34 @@ export default function Navbar() {
                   <ShoppingCart className="w-4 h-4" />
                   View Cart
                   {mounted && itemCount > 0 && (
-                    <span className="badge-gold text-[11px] px-2 py-0.5">
-                      {itemCount}
-                    </span>
+                    <span className="badge-gold text-[11px] px-2 py-0.5">{itemCount}</span>
                   )}
                 </Link>
-                <Link
-                  href="/products"
-                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-full font-semibold text-sm btn-primary"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Shop AR Gifts</span>
-                </Link>
+
+                {mounted && isAuthenticated ? (
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-full font-semibold text-sm border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href="/login"
+                      className="flex items-center justify-center py-3.5 rounded-full font-semibold text-sm btn-outline"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="flex items-center justify-center py-3.5 rounded-full font-semibold text-sm btn-primary"
+                    >
+                      Register
+                    </Link>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
