@@ -131,7 +131,8 @@ export default function CheckoutPage() {
       }
 
       const { data } = await orderApi.create(formData);
-      orderIds.push({ orderId: data.order.orderId, imageUrl: item.customization.uploadedImage?.preview || item.customization.uploadedImage?.url || '' });
+      const cloudinaryImageUrl = data.order.customization?.uploadedImage?.url || '';
+      orderIds.push({ orderId: data.order.orderId, imageUrl: cloudinaryImageUrl });
     }
 
     return orderIds;

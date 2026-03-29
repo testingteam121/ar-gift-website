@@ -134,6 +134,9 @@ const createOrder = async (req, res, next) => {
         orderId: order.orderId,
         amount: totalAmount,
         paymentMethod: order.payment.method,
+        customization: {
+          uploadedImage: order.customization.uploadedImage,
+        },
       },
     });
   } catch (error) {
