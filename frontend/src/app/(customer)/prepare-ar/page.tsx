@@ -30,21 +30,23 @@ function PrepareARContent() {
     try {
       setStatus('compiling');
 
+      // Use same CDN as official MindAR compiler docs (v1.1.5 IIFE, sets window.MINDAR.IMAGE)
       const Compiler: any = await new Promise((resolve, reject) => {
-        if ((window as any).__MindARCompiler) return resolve((window as any).__MindARCompiler);
-        const onReady = () => resolve((window as any).__MindARCompiler);
-        window.addEventListener('mindar-compiler-ready', onReady as EventListener, { once: true });
+        const getCompiler = () => (window as any).MINDAR?.IMAGE?.Compiler;
+        if (getCompiler()) return resolve(getCompiler());
         const script = document.createElement('script');
-        script.type = 'module';
-        script.textContent = `
-          import * as MindAR from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
-          window.__MindARCompiler = MindAR.Compiler ?? MindAR.default?.Compiler ?? MindAR.default?.IMAGE?.Compiler;
-          window.dispatchEvent(new CustomEvent('mindar-compiler-ready'));
-        `;
-        script.onerror = reject;
+        script.src = 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.5/dist/mindar-image.prod.js';
+        script.onload = () => {
+          const poll = () => {
+            const C = getCompiler();
+            if (C) resolve(C);
+            else setTimeout(poll, 100);
+          };
+          poll();
+        };
+        script.onerror = () => reject(new Error('Failed to load MindAR'));
         document.head.appendChild(script);
       });
-      if (!Compiler) throw new Error('MindAR Compiler not found');
 
       // Load the scanner image
       const img = new Image();
@@ -55,13 +57,8 @@ function PrepareARContent() {
         img.src = imageUrl!;
       });
 
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext('2d')!.drawImage(img, 0, 0);
-
       const compiler = new Compiler();
-      await compiler.compileImageTargets([canvas], (p: number) => {
+      await compiler.compileImageTargets([img], (p: number) => {
         setProgress(Math.round(p));
       });
 

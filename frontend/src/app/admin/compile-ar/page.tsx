@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Play } from 'lucide-react';
 import api from '@/lib/api';
 
+// Same CDN URL used by the official MindAR compiler tool docs (v1.1.5, IIFE build)
+const MINDAR_CDN = 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.5/dist/mindar-image.prod.js';
+
 interface AREntry {
   id: string;
   scannerImg: string;
@@ -13,19 +16,20 @@ interface AREntry {
 
 function loadMindARCompiler(): Promise<any> {
   return new Promise((resolve, reject) => {
-    if ((window as any).__MindARCompiler) return resolve((window as any).__MindARCompiler);
-
-    const onReady = () => resolve((window as any).__MindARCompiler);
-    window.addEventListener('mindar-compiler-ready', onReady as EventListener, { once: true });
+    const getCompiler = () => (window as any).MINDAR?.IMAGE?.Compiler;
+    if (getCompiler()) return resolve(getCompiler());
 
     const script = document.createElement('script');
-    script.type = 'module';
-    script.textContent = `
-      import * as MindAR from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
-      window.__MindARCompiler = MindAR.Compiler ?? MindAR.default?.Compiler ?? MindAR.default?.IMAGE?.Compiler;
-      window.dispatchEvent(new CustomEvent('mindar-compiler-ready'));
-    `;
-    script.onerror = reject;
+    script.src = MINDAR_CDN;
+    script.onload = () => {
+      const poll = () => {
+        const C = getCompiler();
+        if (C) resolve(C);
+        else setTimeout(poll, 100);
+      };
+      poll();
+    };
+    script.onerror = () => reject(new Error('Failed to load MindAR script'));
     document.head.appendChild(script);
   });
 }
@@ -51,7 +55,6 @@ export default function CompileARPage() {
 
     try {
       const Compiler = await loadMindARCompiler();
-      if (!Compiler) throw new Error('MindAR Compiler not found in module');
 
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -61,13 +64,8 @@ export default function CompileARPage() {
         img.src = entry.scannerImg;
       });
 
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext('2d')!.drawImage(img, 0, 0);
-
       const compiler = new Compiler();
-      await compiler.compileImageTargets([canvas], (p: number) => setProgress(Math.round(p)));
+      await compiler.compileImageTargets([img], (p: number) => setProgress(Math.round(p)));
       const buffer: ArrayBuffer = await compiler.exportData();
 
       const formData = new FormData();
