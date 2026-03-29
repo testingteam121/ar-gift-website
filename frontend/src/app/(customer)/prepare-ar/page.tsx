@@ -31,7 +31,8 @@ function PrepareARContent() {
       setStatus('compiling');
 
       // Dynamically load MindAR compiler (browser only)
-      const { Compiler } = await import('mind-ar/dist/mindar-image.prod.js' as any);
+      // @ts-ignore
+      const { Compiler } = await import('mind-ar/dist/mindar-image.prod.js');
 
       // Load the scanner image
       const img = new Image();
