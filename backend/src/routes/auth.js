@@ -27,24 +27,29 @@ router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/password', protect, changePassword);
 
-// Google OAuth
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
-);
+// Google OAuth — only active when credentials are configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  router.get('/google',
+    passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+  );
 
-router.get('/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google_failed` }),
-  (req, res) => {
-    const token = req.user.generateToken();
-    const user = encodeURIComponent(JSON.stringify({
-      id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role,
-      avatar: req.user.avatar || '',
-    }));
-    res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${user}`);
-  }
-);
+  router.get('/google/callback',
+    passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/login?error=google_failed` }),
+    (req, res) => {
+      const token = req.user.generateToken();
+      const user = encodeURIComponent(JSON.stringify({
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        avatar: req.user.avatar || '',
+      }));
+      res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${user}`);
+    }
+  );
+} else {
+  router.get('/google', (req, res) => res.status(503).json({ success: false, message: 'Google OAuth not configured.' }));
+  router.get('/google/callback', (req, res) => res.redirect(`${FRONTEND_URL}/login?error=google_failed`));
+}
 
 module.exports = router;
