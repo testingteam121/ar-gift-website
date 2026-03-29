@@ -143,4 +143,33 @@ const deactivateARTarget = async (req, res, next) => {
   }
 };
 
-module.exports = { getARTarget, createARTarget, updateMindFile, deactivateARTarget };
+// @desc    Get all active AR targets as campaign JSON
+// @route   GET /api/ar/data.json
+// @access  Public
+const getAllARData = async (req, res, next) => {
+  try {
+    const targets = await ARTarget.find({ isActive: true })
+      .populate('orderId', 'customer')
+      .sort({ createdAt: -1 });
+
+    const data = targets.map((t, index) => ({
+      id: String(index + 1),
+      campaignName: t.orderId?.customer?.name || '',
+      scannerImg: t.imageUrl || '',
+      mindUrl: t.targetFileUrl || '',
+      videoUrl: t.videoUrl || '',
+      CTAimgUrl: '',
+      CTAredirectUrl: '',
+      clickTrackerUrl: '',
+      impressionTrackerUrl: '',
+      welcomePoster: '',
+      is_active: t.isActive,
+    }));
+
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getARTarget, createARTarget, updateMindFile, deactivateARTarget, getAllARData };

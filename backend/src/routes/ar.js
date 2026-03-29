@@ -4,11 +4,13 @@ const {
   createARTarget,
   updateMindFile,
   deactivateARTarget,
+  getAllARData,
 } = require('../controllers/arController');
 const { protect, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 
+router.get('/data.json', getAllARData);
 router.get('/target/:orderId', getARTarget);
 router.post('/target', protect, adminOnly, createARTarget);
 router.put('/target/:orderId/mind-file', protect, adminOnly, updateMindFile);
