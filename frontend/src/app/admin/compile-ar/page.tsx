@@ -11,6 +11,25 @@ interface AREntry {
   campaignName: string;
 }
 
+function loadMindARCompiler(): Promise<any> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).__MindARCompiler) return resolve((window as any).__MindARCompiler);
+
+    const onReady = () => resolve((window as any).__MindARCompiler);
+    window.addEventListener('mindar-compiler-ready', onReady as EventListener, { once: true });
+
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.textContent = `
+      import * as MindAR from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
+      window.__MindARCompiler = MindAR.Compiler ?? MindAR.default?.Compiler ?? MindAR.default?.IMAGE?.Compiler;
+      window.dispatchEvent(new CustomEvent('mindar-compiler-ready'));
+    `;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
 export default function CompileARPage() {
   const [entries, setEntries] = useState<AREntry[]>([]);
   const [compiling, setCompiling] = useState<string | null>(null);
@@ -31,13 +50,8 @@ export default function CompileARPage() {
     setProgress(0);
 
     try {
-      // Dynamic import works with ES modules and doesn't need window globals
-      const mindar = await import(
-        /* webpackIgnore: true */ 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js'
-      ) as any;
-
-      const Compiler = mindar.Compiler ?? mindar.default?.Compiler ?? mindar.IMAGE?.Compiler ?? (window as any).MINDAR?.IMAGE?.Compiler;
-      if (!Compiler) throw new Error('MindAR Compiler not found in module exports');
+      const Compiler = await loadMindARCompiler();
+      if (!Compiler) throw new Error('MindAR Compiler not found in module');
 
       const img = new Image();
       img.crossOrigin = 'anonymous';
