@@ -30,17 +30,12 @@ function PrepareARContent() {
     try {
       setStatus('compiling');
 
-      // Load MindAR compiler from CDN (avoids native canvas dependency)
-      await new Promise<void>((resolve, reject) => {
-        if ((window as any).MINDAR) return resolve();
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
-        script.onload = () => resolve();
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
+      const mindar = await import(
+        /* webpackIgnore: true */ 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js'
+      ) as any;
 
-      const { Compiler } = (window as any).MINDAR.IMAGE;
+      const Compiler = mindar.Compiler ?? mindar.default?.Compiler ?? mindar.IMAGE?.Compiler ?? (window as any).MINDAR?.IMAGE?.Compiler;
+      if (!Compiler) throw new Error('MindAR Compiler not found');
 
       // Load the scanner image
       const img = new Image();

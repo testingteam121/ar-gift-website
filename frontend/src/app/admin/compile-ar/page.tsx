@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, CheckCircle, AlertCircle, Play } from 'lucide-react';
+import { CheckCircle, AlertCircle, Play } from 'lucide-react';
 import api from '@/lib/api';
 
 interface AREntry {
@@ -16,11 +16,9 @@ export default function CompileARPage() {
   const [compiling, setCompiling] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<Record<string, 'done' | 'error'>>({});
-  const [scriptLoaded, setScriptLoaded] = useState(false);
 
   useEffect(() => {
     fetchEntries();
-    loadMindARScript();
   }, []);
 
   const fetchEntries = async () => {
@@ -28,28 +26,18 @@ export default function CompileARPage() {
     setEntries(data);
   };
 
-  const loadMindARScript = () => {
-    if ((window as any).MINDAR?.IMAGE) return setScriptLoaded(true);
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
-    script.onload = () => {
-      const wait = () => {
-        if ((window as any).MINDAR?.IMAGE) setScriptLoaded(true);
-        else setTimeout(wait, 100);
-      };
-      wait();
-    };
-    document.head.appendChild(script);
-  };
-
   const compile = async (entry: AREntry) => {
-    if (!scriptLoaded) return alert('MindAR compiler not loaded yet, please wait.');
     setCompiling(entry.id);
     setProgress(0);
 
     try {
-      const { Compiler } = (window as any).MINDAR.IMAGE;
+      // Dynamic import works with ES modules and doesn't need window globals
+      const mindar = await import(
+        /* webpackIgnore: true */ 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js'
+      ) as any;
+
+      const Compiler = mindar.Compiler ?? mindar.default?.Compiler ?? mindar.IMAGE?.Compiler ?? (window as any).MINDAR?.IMAGE?.Compiler;
+      if (!Compiler) throw new Error('MindAR Compiler not found in module exports');
 
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -87,10 +75,7 @@ export default function CompileARPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Compile AR Mind Files</h1>
-        <p className="text-gray-500 text-sm mb-8">
-          {scriptLoaded ? '✅ MindAR compiler ready' : '⏳ Loading MindAR compiler...'}
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-8">Compile AR Mind Files</h1>
 
         <div className="space-y-4">
           {entries.map((entry) => (
@@ -121,7 +106,7 @@ export default function CompileARPage() {
                 ) : (
                   <button
                     onClick={() => compile(entry)}
-                    disabled={!!compiling || !scriptLoaded}
+                    disabled={!!compiling}
                     className="flex items-center gap-2 px-4 py-2 bg-[#F5A900] text-white rounded-xl text-sm font-medium hover:bg-[#D97706] disabled:opacity-40 transition-colors"
                   >
                     <Play className="w-4 h-4" />
