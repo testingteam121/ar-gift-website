@@ -152,8 +152,8 @@ const getAllARData = async (req, res, next) => {
       .populate('orderId', 'customer')
       .sort({ createdAt: -1 });
 
-    const data = targets.map((t, index) => ({
-      id: String(index + 1),
+    const data = targets.map((t) => ({
+      id: t.orderIdString,
       campaignName: t.orderId?.customer?.name || '',
       scannerImg: t.imageUrl || '',
       mindUrl: t.targetFileUrl || '',
