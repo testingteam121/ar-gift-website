@@ -87,8 +87,8 @@ export default function CheckoutPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const createOrders = async (): Promise<string[]> => {
-    const orderIds: string[] = [];
+  const createOrders = async (): Promise<{ orderId: string; imageUrl: string }[]> => {
+    const orderIds: { orderId: string; imageUrl: string }[] = [];
 
     for (const item of items) {
       const formData = new FormData();
