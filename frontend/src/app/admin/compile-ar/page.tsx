@@ -31,6 +31,7 @@ export default function CompileARPage() {
   const loadMindARScript = () => {
     if ((window as any).MINDAR?.IMAGE) return setScriptLoaded(true);
     const script = document.createElement('script');
+    script.type = 'module';
     script.src = 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js';
     script.onload = () => {
       const wait = () => {
