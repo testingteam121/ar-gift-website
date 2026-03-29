@@ -110,11 +110,19 @@ export default function CheckoutPage() {
         formData.append('selectedImageUrl', item.customization.uploadedImage.url);
       }
 
-      if (item.customization.selectedVideo?.url) {
-        formData.append('selectedVideoUrl', item.customization.selectedVideo.url);
-        formData.append('selectedVideoType', item.customization.selectedVideo.type);
-        if (item.customization.selectedVideo.presetVideo) {
-          formData.append('selectedVideoPresetId', item.customization.selectedVideo.presetVideo._id);
+      if (item.customization.selectedVideo) {
+        if (item.customization.selectedVideo.type === 'upload') {
+          if (item.customization.selectedVideo.file) {
+            formData.append('video', item.customization.selectedVideo.file);
+          } else {
+            throw new Error('Uploaded video was lost. Please go back and re-upload your video.');
+          }
+        } else if (item.customization.selectedVideo.url) {
+          formData.append('selectedVideoUrl', item.customization.selectedVideo.url);
+          formData.append('selectedVideoType', item.customization.selectedVideo.type);
+          if (item.customization.selectedVideo.presetVideo) {
+            formData.append('selectedVideoPresetId', item.customization.selectedVideo.presetVideo._id);
+          }
         }
       }
 
