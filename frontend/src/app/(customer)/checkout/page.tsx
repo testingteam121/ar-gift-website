@@ -131,7 +131,7 @@ export default function CheckoutPage() {
       }
 
       const { data } = await orderApi.create(formData);
-      orderIds.push(data.order.orderId);
+      orderIds.push({ orderId: data.order.orderId, imageUrl: item.customization.uploadedImage?.preview || item.customization.uploadedImage?.url || '' });
     }
 
     return orderIds;
@@ -189,17 +189,20 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      const orderIds = await createOrders();
-      const firstOrderId = orderIds[0];
+      const orders = await createOrders();
+      const firstOrder = orders[0];
 
       if (paymentMethod === 'razorpay') {
-        await handleRazorpayPayment(firstOrderId);
+        await handleRazorpayPayment(firstOrder.orderId);
       } else {
-        await paymentApi.confirmCOD(firstOrderId);
+        await paymentApi.confirmCOD(firstOrder.orderId);
       }
 
       clearCart();
-      router.push(`/order-confirmation?orderId=${firstOrderId}`);
+      const prepareUrl = firstOrder.imageUrl
+        ? `/prepare-ar?orderId=${firstOrder.orderId}&imageUrl=${encodeURIComponent(firstOrder.imageUrl)}`
+        : `/order-confirmation?orderId=${firstOrder.orderId}`;
+      router.push(prepareUrl);
       toast.success('Order placed successfully!');
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Order placement failed';

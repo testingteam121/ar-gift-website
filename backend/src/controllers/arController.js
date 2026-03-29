@@ -1,5 +1,6 @@
 const ARTarget = require('../models/ARTarget');
 const Order = require('../models/Order');
+const cloudinary = require('../config/cloudinary');
 
 // @desc    Get AR target by orderId
 // @route   GET /api/ar/target/:orderId
@@ -172,4 +173,39 @@ const getAllARData = async (req, res, next) => {
   }
 };
 
-module.exports = { getARTarget, createARTarget, updateMindFile, deactivateARTarget, getAllARData };
+// @desc    Receive compiled .mind file from browser and upload to Cloudinary
+// @route   POST /api/ar/target/:orderId/upload-mind
+// @access  Public (called from order confirmation page)
+const uploadCompiledMindFile = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+
+    const arTarget = await ARTarget.findOne({ orderIdString: orderId.toUpperCase() });
+    if (!arTarget) {
+      return res.status(404).json({ success: false, message: 'AR target not found.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No .mind file received.' });
+    }
+
+    const mindFileUrl = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { resource_type: 'raw', folder: 'mind-files', public_id: `order_${orderId}`, format: 'mind' },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result.secure_url);
+        }
+      );
+      stream.end(req.file.buffer);
+    });
+
+    await ARTarget.findByIdAndUpdate(arTarget._id, { targetFileUrl: mindFileUrl });
+
+    res.status(200).json({ success: true, mindFileUrl });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getARTarget, createARTarget, updateMindFile, deactivateARTarget, getAllARData, uploadCompiledMindFile };
