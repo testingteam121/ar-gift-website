@@ -27,13 +27,16 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// CORS — allow any localhost port in development
-const corsOrigin = process.env.NODE_ENV === 'development'
-  ? (origin, callback) => {
-      if (!origin || /^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
-      callback(new Error('Not allowed by CORS'));
-    }
-  : process.env.FRONTEND_URL || 'http://localhost:3000';
+// CORS — allow localhost in dev, and any *.vercel.app preview + production URL
+const corsOrigin = (origin, callback) => {
+  if (!origin) return callback(null, true); // server-to-server / curl
+  if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
+  const allowed = (process.env.FRONTEND_URL || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (allowed.includes(origin)) return callback(null, true);
+  if (/^https:\/\/[a-z0-9-]+-[a-z0-9]+-[a-z0-9-]+\.vercel\.app$/.test(origin)) return callback(null, true);
+  if (/^https:\/\/ar-gift-website.*\.vercel\.app$/.test(origin)) return callback(null, true);
+  callback(new Error('Not allowed by CORS'));
+};
 
 app.use(cors({
   origin: corsOrigin,
